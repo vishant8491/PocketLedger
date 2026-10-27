@@ -79,9 +79,9 @@ class Category {
     );
   }
 
-  /// Maps iconKey string to standard Material IconData.
-  IconData get iconData {
-    switch (iconKey) {
+  /// Maps an iconKey string to standard Material IconData.
+  static IconData iconDataFromKey(String? key) {
+    switch (key) {
       case 'work':
         return Icons.work_outline;
       case 'laptop':
@@ -119,6 +119,9 @@ class Category {
         return Icons.category_outlined;
     }
   }
+
+  /// Convenience getter for this category's icon.
+  IconData get iconData => iconDataFromKey(iconKey);
 
   Color get color => Color(colorValue);
 

@@ -147,7 +147,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
                                     : Border.all(color: Colors.grey.shade300),
                               ),
                               child: CategoryIcon(
-                                iconData: _getIconData(iconKey),
+                                iconData: Category.iconDataFromKey(iconKey),
                                 color: Color(selectedColor),
                                 size: 24,
                               ),
@@ -402,40 +402,5 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         );
       },
     );
-  }
-
-  static IconData _getIconData(String key) {
-    switch (key) {
-      case 'work':
-        return Icons.work_outline;
-      case 'laptop':
-        return Icons.laptop_mac;
-      case 'trending_up':
-        return Icons.trending_up;
-      case 'card_giftcard':
-        return Icons.card_giftcard;
-      case 'wallet':
-        return Icons.account_balance_wallet_outlined;
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'home':
-        return Icons.home_outlined;
-      case 'lightbulb':
-        return Icons.lightbulb_outline;
-      case 'directions_car':
-        return Icons.directions_car_outlined;
-      case 'shopping_bag':
-        return Icons.shopping_bag_outlined;
-      case 'movie':
-        return Icons.movie_outlined;
-      case 'local_hospital':
-        return Icons.local_hospital_outlined;
-      case 'school':
-        return Icons.school_outlined;
-      case 'spa':
-        return Icons.spa_outlined;
-      default:
-        return Icons.category_outlined;
-    }
   }
 }

@@ -48,12 +48,18 @@ class CurrencyFormatter {
     final String clean = input.trim().replaceAll(',', '');
     if (clean.isEmpty) return null;
 
+    // Max supported personal finance amount: 99 Crore, 99 Lakh, 99 Thousand, 999 INR
+    const int maxRupees = 999999999;
+
+    final String normalized = clean.startsWith('.') ? '0$clean' : clean;
+
     // Reject invalid characters or negative values.
     final RegExp validRegex = RegExp(r'^\d+(\.\d{1,2})?$');
-    if (!validRegex.hasMatch(clean)) return null;
+    if (!validRegex.hasMatch(normalized)) return null;
 
-    final List<String> parts = clean.split('.');
-    final int rupees = int.tryParse(parts[0]) ?? 0;
+    final List<String> parts = normalized.split('.');
+    final int? rupees = int.tryParse(parts[0]);
+    if (rupees == null || rupees > maxRupees) return null;
     int paise = 0;
 
     if (parts.length > 1) {
@@ -77,11 +83,15 @@ class CurrencyFormatter {
     final String clean = input.trim().replaceAll(',', '');
     if (clean.isEmpty) return null;
 
-    final RegExp validRegex = RegExp(r'^\d+(\.\d{1,2})?$');
-    if (!validRegex.hasMatch(clean)) return null;
+    const int maxRupees = 999999999;
+    final String normalized = clean.startsWith('.') ? '0$clean' : clean;
 
-    final List<String> parts = clean.split('.');
-    final int rupees = int.tryParse(parts[0]) ?? 0;
+    final RegExp validRegex = RegExp(r'^\d+(\.\d{1,2})?$');
+    if (!validRegex.hasMatch(normalized)) return null;
+
+    final List<String> parts = normalized.split('.');
+    final int? rupees = int.tryParse(parts[0]);
+    if (rupees == null || rupees > maxRupees) return null;
     int paise = 0;
 
     if (parts.length > 1) {

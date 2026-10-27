@@ -33,6 +33,7 @@ class FinanceProvider extends ChangeNotifier {
   int _monthlyIncome = 0;
   int _monthlyExpense = 0;
   int _monthlyNet = 0;
+  int _prevMonthExpense = 0;
   List<Map<String, dynamic>> _categorySpending = <Map<String, dynamic>>[];
   Map<int, int> _dailySpending = <int, int>{};
 
@@ -53,6 +54,7 @@ class FinanceProvider extends ChangeNotifier {
   int get monthlyIncome => _monthlyIncome;
   int get monthlyExpense => _monthlyExpense;
   int get monthlyNet => _monthlyNet;
+  int get prevMonthExpense => _prevMonthExpense;
   List<Map<String, dynamic>> get categorySpending =>
       List<Map<String, dynamic>>.unmodifiable(_categorySpending);
   Map<int, int> get dailySpending => Map<int, int>.unmodifiable(_dailySpending);
@@ -155,20 +157,38 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> _refreshMonthlyDataInternal() async {
     final DateTime start =
         DateHelper.startOfMonth(_selectedMonth.year, _selectedMonth.month);
-    final DateTime end =
-        DateHelper.endOfMonth(_selectedMonth.year, _selectedMonth.month);
+    final DateTime nextMonthStart =
+        DateHelper.startOfNextMonth(_selectedMonth.year, _selectedMonth.month);
 
     final Map<String, int> totals =
-        await _dbService.getMonthlyTotals(start, end);
+        await _dbService.getMonthlyTotals(start, nextMonthStart);
     _monthlyIncome = totals['income'] ?? 0;
     _monthlyExpense = totals['expense'] ?? 0;
     _monthlyNet = totals['net'] ?? 0;
 
     _categorySpending =
-        await _dbService.getCategorySpendingForMonth(start, end);
-    _dailySpending = await _dbService.getDailySpendingForMonth(start, end);
+        await _dbService.getCategorySpendingForMonth(start, nextMonthStart);
+    _dailySpending =
+        await _dbService.getDailySpendingForMonth(start, nextMonthStart);
     _budgets = await _dbService.getBudgetsForMonth(
         _selectedMonth.month, _selectedMonth.year);
+
+    // Calculate previous month expense comparison
+    final int prevMonth =
+        _selectedMonth.month == 1 ? 12 : _selectedMonth.month - 1;
+    final int prevYear = _selectedMonth.month == 1
+        ? _selectedMonth.year - 1
+        : _selectedMonth.year;
+    final DateTime prevStart = DateHelper.startOfMonth(prevYear, prevMonth);
+    final DateTime prevNext = DateHelper.startOfNextMonth(prevYear, prevMonth);
+    final Map<String, int> prevTotals =
+        await _dbService.getMonthlyTotals(prevStart, prevNext);
+    _prevMonthExpense = prevTotals['expense'] ?? 0;
+  }
+
+  /// Passthrough to fetch both sides of a transfer group.
+  Future<List<TransactionItem>> getTransferLegs(String transferGroupId) {
+    return _dbService.getTransferLegs(transferGroupId);
   }
 
   // ==========================================

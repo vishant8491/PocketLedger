@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/budget.dart';
+import '../models/category.dart';
 import '../utils/currency_formatter.dart';
 import 'category_icon.dart';
 
@@ -37,7 +38,7 @@ class BudgetProgressCard extends StatelessWidget {
           '${CurrencyFormatter.formatPaise(budget.remainingPaise)} remaining';
     }
 
-    final IconData iconData = _getIconData(budget.categoryIconKey);
+    final IconData iconData = Category.iconDataFromKey(budget.categoryIconKey);
     final Color catColor = Color(budget.categoryColorValue ?? 0xFF64748B);
 
     return Card(
@@ -150,40 +151,5 @@ class BudgetProgressCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _getIconData(String? key) {
-    switch (key) {
-      case 'work':
-        return Icons.work_outline;
-      case 'laptop':
-        return Icons.laptop_mac;
-      case 'trending_up':
-        return Icons.trending_up;
-      case 'card_giftcard':
-        return Icons.card_giftcard;
-      case 'wallet':
-        return Icons.account_balance_wallet_outlined;
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'home':
-        return Icons.home_outlined;
-      case 'lightbulb':
-        return Icons.lightbulb_outline;
-      case 'directions_car':
-        return Icons.directions_car_outlined;
-      case 'shopping_bag':
-        return Icons.shopping_bag_outlined;
-      case 'movie':
-        return Icons.movie_outlined;
-      case 'local_hospital':
-        return Icons.local_hospital_outlined;
-      case 'school':
-        return Icons.school_outlined;
-      case 'spa':
-        return Icons.spa_outlined;
-      default:
-        return Icons.category_outlined;
-    }
   }
 }

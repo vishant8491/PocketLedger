@@ -67,13 +67,18 @@ class ExportService {
 
     String sanitized = text;
 
-    // Check for formula injection triggers
-    final String firstChar = sanitized.substring(0, 1);
-    if (firstChar == '=' ||
-        firstChar == '+' ||
-        firstChar == '-' ||
-        firstChar == '@') {
-      sanitized = "'$sanitized";
+    // Check for formula injection triggers (including leading whitespace/tabs)
+    final String trimmedLeft = sanitized.trimLeft();
+    if (trimmedLeft.isNotEmpty) {
+      final String firstChar = trimmedLeft.substring(0, 1);
+      if (firstChar == '=' ||
+          firstChar == '+' ||
+          firstChar == '-' ||
+          firstChar == '@' ||
+          firstChar == '\t' ||
+          firstChar == '\r') {
+        sanitized = "'$sanitized";
+      }
     }
 
     // Escape double quotes by doubling them (""")

@@ -1,52 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/category.dart';
 import '../providers/finance_provider.dart';
-import '../services/database_service.dart';
 import '../utils/currency_formatter.dart';
-import '../utils/date_helper.dart';
 import '../widgets/category_icon.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/month_selector_header.dart';
 
 /// Screen presenting financial analytics, category distributions, income vs expense comparisons,
 /// and daily spending trends with text summaries and division-by-zero safety.
-class InsightsScreen extends StatefulWidget {
+class InsightsScreen extends StatelessWidget {
   const InsightsScreen({super.key});
-
-  @override
-  State<InsightsScreen> createState() => _InsightsScreenState();
-}
-
-class _InsightsScreenState extends State<InsightsScreen> {
-  int _prevMonthExpense = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPreviousMonthData();
-  }
-
-  Future<void> _loadPreviousMonthData() async {
-    final FinanceProvider finance = context.read<FinanceProvider>();
-    final DateTime current = finance.selectedMonth;
-    final int prevMonth = current.month == 1 ? 12 : current.month - 1;
-    final int prevYear = current.month == 1 ? current.year - 1 : current.year;
-
-    try {
-      final DatabaseService db = DatabaseService();
-      final DateTime start = DateHelper.startOfMonth(prevYear, prevMonth);
-      final DateTime end = DateHelper.endOfMonth(prevYear, prevMonth);
-      final Map<String, int> totals = await db.getMonthlyTotals(start, end);
-      if (mounted) {
-        setState(() {
-          _prevMonthExpense = totals['expense'] ?? 0;
-        });
-      }
-    } catch (_) {
-      // Ignored
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +27,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           final int income = finance.monthlyIncome;
           final int expense = finance.monthlyExpense;
           final int net = finance.monthlyNet;
+          final int prevMonthExpense = finance.prevMonthExpense;
           final List<Map<String, dynamic>> categorySpend =
               finance.categorySpending;
           final Map<int, int> dailySpend = finance.dailySpending;
@@ -71,9 +37,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
               income > 0 ? ((net / income) * 100).clamp(-100.0, 100.0) : 0.0;
 
           // Safe previous month expense comparison
-          final int expenseDifference = expense - _prevMonthExpense;
-          final double expenseChangePercent = _prevMonthExpense > 0
-              ? (expenseDifference / _prevMonthExpense) * 100
+          final int expenseDifference = expense - prevMonthExpense;
+          final double expenseChangePercent = prevMonthExpense > 0
+              ? (expenseDifference / prevMonthExpense) * 100
               : (expense > 0 ? 100.0 : 0.0);
 
           final bool hasData = income > 0 || expense > 0;
@@ -85,7 +51,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 selectedMonth: finance.selectedMonth,
                 onMonthChanged: (DateTime newMonth) {
                   finance.setSelectedMonth(newMonth);
-                  _loadPreviousMonthData();
                 },
               ),
               if (!hasData)
@@ -353,8 +318,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
                                 expense > 0 ? (spent / expense) * 100 : 0.0;
                             final Color color =
                                 Color(row['colorValue'] as int? ?? 0xFF64748B);
-                            final IconData icon =
-                                _getIconData(row['iconKey'] as String?);
+                            final IconData icon = Category.iconDataFromKey(
+                                row['iconKey'] as String?);
 
                             return Padding(
                               padding:
@@ -546,40 +511,5 @@ class _InsightsScreenState extends State<InsightsScreen> {
       if (v > max) max = v;
     }
     return max <= 0 ? 100000.0 : max.toDouble();
-  }
-
-  static IconData _getIconData(String? key) {
-    switch (key) {
-      case 'work':
-        return Icons.work_outline;
-      case 'laptop':
-        return Icons.laptop_mac;
-      case 'trending_up':
-        return Icons.trending_up;
-      case 'card_giftcard':
-        return Icons.card_giftcard;
-      case 'wallet':
-        return Icons.account_balance_wallet_outlined;
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'home':
-        return Icons.home_outlined;
-      case 'lightbulb':
-        return Icons.lightbulb_outline;
-      case 'directions_car':
-        return Icons.directions_car_outlined;
-      case 'shopping_bag':
-        return Icons.shopping_bag_outlined;
-      case 'movie':
-        return Icons.movie_outlined;
-      case 'local_hospital':
-        return Icons.local_hospital_outlined;
-      case 'school':
-        return Icons.school_outlined;
-      case 'spa':
-        return Icons.spa_outlined;
-      default:
-        return Icons.category_outlined;
-    }
   }
 }

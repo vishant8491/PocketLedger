@@ -15,6 +15,12 @@ class DateHelper {
     return DateTime(year, month, 1, 0, 0, 0, 0);
   }
 
+  /// Returns the start boundary of the subsequent month (00:00:00.000).
+  /// Ideal for strict '<' range queries preventing microsecond exclusion bugs.
+  static DateTime startOfNextMonth(int year, int month) {
+    return DateTime(year, month + 1, 1, 0, 0, 0, 0);
+  }
+
   /// Returns the end boundary (23:59:59.999) for a given year and month in local time.
   static DateTime endOfMonth(int year, int month) {
     // Setting day to 0 of next month gives the last day of the current month.

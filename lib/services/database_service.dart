@@ -402,17 +402,23 @@ class DatabaseService {
     );
   }
 
-  /// Archives a category instead of deleting if it is referenced in transactions.
+  /// Archives a category instead of deleting if it is referenced in transactions or budgets.
   Future<void> archiveOrDeleteCategory(String categoryId) async {
     final Database db = await database;
-    final List<Map<String, dynamic>> countResult = await db.rawQuery(
+    final List<Map<String, dynamic>> txCountResult = await db.rawQuery(
       'SELECT COUNT(*) as total FROM transactions WHERE categoryId = ?',
       <Object>[categoryId],
     );
-    final int count = Sqflite.firstIntValue(countResult) ?? 0;
+    final int txCount = Sqflite.firstIntValue(txCountResult) ?? 0;
 
-    if (count > 0) {
-      // Archive to preserve historical reporting
+    final List<Map<String, dynamic>> budgetCountResult = await db.rawQuery(
+      'SELECT COUNT(*) as total FROM budgets WHERE categoryId = ?',
+      <Object>[categoryId],
+    );
+    final int budgetCount = Sqflite.firstIntValue(budgetCountResult) ?? 0;
+
+    if (txCount > 0 || budgetCount > 0) {
+      // Archive to preserve historical reporting and budget foreign-key integrity
       await db.update(
         'categories',
         <String, dynamic>{'isArchived': 1},
@@ -420,7 +426,7 @@ class DatabaseService {
         whereArgs: <Object>[categoryId],
       );
     } else {
-      // Safe to delete if never referenced
+      // Safe to delete if never referenced anywhere
       await db.delete(
         'categories',
         where: 'id = ?',
@@ -461,18 +467,7 @@ class DatabaseService {
     final String groupId =
         'trf_${now.millisecondsSinceEpoch}_${now.microsecond}';
 
-    final String fromAccountName =
-        (await getAccountById(fromAccountId))?.name ?? 'Account';
-    final String toAccountName =
-        (await getAccountById(toAccountId))?.name ?? 'Account';
-
-    final String outNote = note != null && note.isNotEmpty
-        ? '$note (Transfer to $toAccountName)'
-        : 'Transfer to $toAccountName';
-
-    final String inNote = note != null && note.isNotEmpty
-        ? '$note (Transfer from $fromAccountName)'
-        : 'Transfer from $fromAccountName';
+    final String cleanNote = note != null ? note.trim() : '';
 
     final TransactionItem transferOut = TransactionItem(
       id: '${groupId}_out',
@@ -481,7 +476,7 @@ class DatabaseService {
       transactionType: TransactionType.transferOut,
       amountPaise: amountPaise,
       transactionDate: date,
-      note: outNote,
+      note: cleanNote.isNotEmpty ? cleanNote : null,
       transferGroupId: groupId,
       createdAt: now,
       updatedAt: now,
@@ -494,7 +489,7 @@ class DatabaseService {
       transactionType: TransactionType.transferIn,
       amountPaise: amountPaise,
       transactionDate: date,
-      note: inNote,
+      note: cleanNote.isNotEmpty ? cleanNote : null,
       transferGroupId: groupId,
       createdAt: now,
       updatedAt: now,
@@ -517,6 +512,28 @@ class DatabaseService {
     );
   }
 
+  /// Fetches both legs of a transfer group (transfer_out and transfer_in).
+  Future<List<TransactionItem>> getTransferLegs(String transferGroupId) async {
+    final Database db = await database;
+    final List<Map<String, dynamic>> results = await db.rawQuery('''
+      SELECT 
+        t.*,
+        a.name AS accountName,
+        c.name AS categoryName,
+        c.iconKey AS categoryIconKey,
+        c.colorValue AS categoryColorValue
+      FROM transactions t
+      LEFT JOIN accounts a ON t.accountId = a.id
+      LEFT JOIN categories c ON t.categoryId = c.id
+      WHERE t.transferGroupId = ?
+      ORDER BY t.transactionType ASC
+    ''', <Object>[transferGroupId]);
+
+    return results
+        .map((Map<String, dynamic> row) => TransactionItem.fromMap(row))
+        .toList();
+  }
+
   /// Atomically updates both sides of a transfer.
   Future<void> updateTransfer({
     required String transferGroupId,
@@ -535,19 +552,7 @@ class DatabaseService {
 
     final Database db = await database;
     final DateTime now = DateTime.now();
-
-    final String fromAccountName =
-        (await getAccountById(fromAccountId))?.name ?? 'Account';
-    final String toAccountName =
-        (await getAccountById(toAccountId))?.name ?? 'Account';
-
-    final String outNote = note != null && note.isNotEmpty
-        ? '$note (Transfer to $toAccountName)'
-        : 'Transfer to $toAccountName';
-
-    final String inNote = note != null && note.isNotEmpty
-        ? '$note (Transfer from $fromAccountName)'
-        : 'Transfer from $fromAccountName';
+    final String cleanNote = note != null ? note.trim() : '';
 
     await db.transaction((Transaction txn) async {
       // Delete old transfer legs for this group
@@ -565,7 +570,7 @@ class DatabaseService {
         transactionType: TransactionType.transferOut,
         amountPaise: amountPaise,
         transactionDate: date,
-        note: outNote,
+        note: cleanNote.isNotEmpty ? cleanNote : null,
         transferGroupId: transferGroupId,
         createdAt: now,
         updatedAt: now,
@@ -578,7 +583,7 @@ class DatabaseService {
         transactionType: TransactionType.transferIn,
         amountPaise: amountPaise,
         transactionDate: date,
-        note: inNote,
+        note: cleanNote.isNotEmpty ? cleanNote : null,
         transferGroupId: transferGroupId,
         createdAt: now,
         updatedAt: now,
@@ -685,16 +690,18 @@ class DatabaseService {
   /// Calculates total income and expenses for a specific month.
   /// Explicitly excludes transfers (transfer_out, transfer_in) from calculations.
   Future<Map<String, int>> getMonthlyTotals(
-      DateTime startOfMonth, DateTime endOfMonth) async {
+      DateTime startOfMonth, DateTime startOfNextMonth) async {
     final Database db = await database;
     final List<Map<String, dynamic>> result = await db.rawQuery('''
       SELECT 
         COALESCE(SUM(CASE WHEN transactionType = 'income' THEN amountPaise ELSE 0 END), 0) AS totalIncome,
         COALESCE(SUM(CASE WHEN transactionType = 'expense' THEN amountPaise ELSE 0 END), 0) AS totalExpense
       FROM transactions
-      WHERE transactionDate >= ? AND transactionDate <= ?
-    ''',
-        <Object>[startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+      WHERE transactionDate >= ? AND transactionDate < ?
+    ''', <Object>[
+      startOfMonth.toIso8601String(),
+      startOfNextMonth.toIso8601String()
+    ]);
 
     if (result.isEmpty) {
       return <String, int>{'income': 0, 'expense': 0, 'net': 0};
@@ -711,7 +718,7 @@ class DatabaseService {
 
   /// Calculates total spending grouped by expense category for a given month.
   Future<List<Map<String, dynamic>>> getCategorySpendingForMonth(
-      DateTime startOfMonth, DateTime endOfMonth) async {
+      DateTime startOfMonth, DateTime startOfNextMonth) async {
     final Database db = await database;
     final List<Map<String, dynamic>> results = await db.rawQuery('''
       SELECT 
@@ -724,18 +731,20 @@ class DatabaseService {
       INNER JOIN transactions t ON t.categoryId = c.id
       WHERE t.transactionType = 'expense'
         AND t.transactionDate >= ? 
-        AND t.transactionDate <= ?
+        AND t.transactionDate < ?
       GROUP BY c.id, c.name, c.iconKey, c.colorValue
       ORDER BY spentPaise DESC
-    ''',
-        <Object>[startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+    ''', <Object>[
+      startOfMonth.toIso8601String(),
+      startOfNextMonth.toIso8601String()
+    ]);
 
     return results;
   }
 
   /// Calculates daily expense amounts for a given month (for trends and charts).
   Future<Map<int, int>> getDailySpendingForMonth(
-      DateTime startOfMonth, DateTime endOfMonth) async {
+      DateTime startOfMonth, DateTime startOfNextMonth) async {
     final Database db = await database;
     final List<Map<String, dynamic>> results = await db.rawQuery('''
       SELECT 
@@ -744,10 +753,12 @@ class DatabaseService {
       FROM transactions t
       WHERE t.transactionType = 'expense'
         AND t.transactionDate >= ?
-        AND t.transactionDate <= ?
+        AND t.transactionDate < ?
       ORDER BY t.transactionDate ASC
-    ''',
-        <Object>[startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+    ''', <Object>[
+      startOfMonth.toIso8601String(),
+      startOfNextMonth.toIso8601String()
+    ]);
 
     final Map<int, int> dailyTotals = <int, int>{};
     for (final Map<String, dynamic> row in results) {
@@ -766,8 +777,8 @@ class DatabaseService {
   Future<List<Budget>> getBudgetsForMonth(int month, int year) async {
     final Database db = await database;
     final String startIso = DateTime(year, month, 1, 0, 0, 0).toIso8601String();
-    final String endIso =
-        DateTime(year, month + 1, 0, 23, 59, 59, 999).toIso8601String();
+    final String nextMonthIso =
+        DateTime(year, month + 1, 1, 0, 0, 0).toIso8601String();
 
     final List<Map<String, dynamic>> results = await db.rawQuery('''
       SELECT 
@@ -785,13 +796,13 @@ class DatabaseService {
           WHERE t.categoryId = b.categoryId
             AND t.transactionType = 'expense'
             AND t.transactionDate >= ?
-            AND t.transactionDate <= ?
+            AND t.transactionDate < ?
         ), 0) AS spentPaise
       FROM budgets b
       INNER JOIN categories c ON b.categoryId = c.id
       WHERE b.month = ? AND b.year = ?
       ORDER BY b.limitPaise DESC
-    ''', <Object>[startIso, endIso, month, year]);
+    ''', <Object>[startIso, nextMonthIso, month, year]);
 
     return results.map((Map<String, dynamic> r) {
       return Budget.fromMap(r, spentPaise: r['spentPaise'] as int? ?? 0);

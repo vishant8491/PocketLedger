@@ -66,6 +66,52 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
     _amountController.addListener(_markDirty);
     _noteController.addListener(_markDirty);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final FinanceProvider finance = context.read<FinanceProvider>();
+
+      if (edit != null && edit.isTransfer && edit.transferGroupId != null) {
+        final List<TransactionItem> legs =
+            await finance.getTransferLegs(edit.transferGroupId!);
+        if (legs.isNotEmpty && mounted) {
+          final TransactionItem? outLeg =
+              legs.cast<TransactionItem?>().firstWhere(
+                    (TransactionItem? l) =>
+                        l?.transactionType == TransactionType.transferOut,
+                    orElse: () => null,
+                  );
+          final TransactionItem? inLeg =
+              legs.cast<TransactionItem?>().firstWhere(
+                    (TransactionItem? l) =>
+                        l?.transactionType == TransactionType.transferIn,
+                    orElse: () => null,
+                  );
+          setState(() {
+            if (outLeg != null) _selectedAccountId = outLeg.accountId;
+            if (inLeg != null) _selectedToAccountId = inLeg.accountId;
+            if (outLeg?.note != null) _noteController.text = outLeg!.note!;
+          });
+        }
+      } else {
+        if (_selectedAccountId == null && finance.accounts.isNotEmpty) {
+          setState(() => _selectedAccountId = finance.accounts.first.id);
+        }
+        if (_selectedCategoryId == null) {
+          final IncomeExpenseType targetType =
+              _selectedType == TransactionType.income
+                  ? IncomeExpenseType.income
+                  : IncomeExpenseType.expense;
+          final List<Category> available = finance.categories
+              .where((Category c) =>
+                  c.incomeOrExpense == targetType && !c.isArchived)
+              .toList();
+          if (available.isNotEmpty) {
+            setState(() => _selectedCategoryId = available.first.id);
+          }
+        }
+      }
+    });
   }
 
   void _markDirty() {
@@ -182,6 +228,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       }
 
       if (mounted) {
+        setState(() => _isDirty = false);
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -233,6 +280,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
         if (didPop) return;
         final bool shouldPop = await _onWillPop();
         if (shouldPop && context.mounted) {
+          setState(() => _isDirty = false);
           Navigator.of(context).pop();
         }
       },
@@ -244,11 +292,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           builder:
               (BuildContext context, FinanceProvider finance, Widget? child) {
             final List<Account> accounts = finance.accounts;
-
-            // Ensure valid default account selection
-            if (_selectedAccountId == null && accounts.isNotEmpty) {
-              _selectedAccountId = accounts.first.id;
-            }
 
             // Exclude archived categories from new selection unless already assigned
             final IncomeExpenseType activeIncomeOrExpense =
@@ -262,12 +305,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               if (cat.isArchived && cat.id != _selectedCategoryId) return false;
               return true;
             }).toList();
-
-            if (_selectedCategoryId == null &&
-                availableCategories.isNotEmpty &&
-                !isTransfer) {
-              _selectedCategoryId = availableCategories.first.id;
-            }
 
             return Form(
               key: _formKey,
