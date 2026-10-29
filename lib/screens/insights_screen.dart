@@ -7,6 +7,7 @@ import '../utils/currency_formatter.dart';
 import '../widgets/category_icon.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/month_selector_header.dart';
+import 'settings_screen.dart';
 
 /// Screen presenting financial analytics, category distributions, income vs expense comparisons,
 /// and daily spending trends with text summaries and division-by-zero safety.
@@ -20,6 +21,17 @@ class InsightsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Insights & Trends'),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<FinanceProvider>(
         builder:

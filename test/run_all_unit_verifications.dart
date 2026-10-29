@@ -1,10 +1,9 @@
 // Standalone test verification runner that runs directly on any Dart SDK
 // Verifies money arithmetic, budget calculations, transfers exclusion, and formula injection defenses.
 
-import '../lib/models/account.dart';
-import '../lib/models/budget.dart';
-import '../lib/models/transaction.dart';
-import '../lib/utils/currency_formatter.dart';
+import 'package:pocket_ledger/models/budget.dart';
+import 'package:pocket_ledger/models/transaction.dart';
+import 'package:pocket_ledger/utils/currency_formatter.dart';
 
 // Standalone mirror of CSV sanitization to verify the security logic
 String sanitizeCsvField(String text) {

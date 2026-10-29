@@ -13,7 +13,7 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: <dynamic>[
+      providers: [
         Provider<DatabaseService>.value(value: dbService),
         ChangeNotifierProvider<ThemeProvider>(
           create: (_) => ThemeProvider(dbService),
@@ -61,7 +61,7 @@ class PocketLedgerApp extends StatelessWidget {
         ),
         iconTheme: IconThemeData(color: Color(0xFF0F172A)),
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         elevation: 0,
         color: Colors.white,
       ),
@@ -100,7 +100,7 @@ class PocketLedgerApp extends StatelessWidget {
         ),
         iconTheme: IconThemeData(color: Colors.white),
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         elevation: 0,
         color: Color(0xFF1E293B),
       ),
@@ -146,6 +146,55 @@ class _AppRoot extends StatelessWidget {
                   SizedBox(height: 16),
                   Text('Loading PocketLedger...'),
                 ],
+              ),
+            ),
+          );
+        }
+
+        if (finance.errorMessage != null) {
+          return Scaffold(
+            body: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(Icons.error_outline,
+                            size: 54, color: Colors.amber),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Storage Initialization Notice',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          finance.errorMessage!,
+                          style:
+                              const TextStyle(color: Colors.red, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Note: Web browser data is stored locally in your browser storage and is independent from Android app data. Private/Incognito browsing or storage restrictions may prevent database access.',
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => finance.loadInitialData(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           );

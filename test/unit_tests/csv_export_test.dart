@@ -8,12 +8,12 @@ void main() {
         'sanitizes strings starting with =, +, -, @ to prevent spreadsheet macro injection',
         () {
       expect(ExportService.sanitizeCsvField('=SUM(A1:A10)'),
-          equals('""\'=SUM(A1:A10)""'));
-      expect(ExportService.sanitizeCsvField('+12345'), equals('""\'+12345""'));
+          equals('"\'=SUM(A1:A10)"'));
+      expect(ExportService.sanitizeCsvField('+12345'), equals('"\'+12345"'));
       expect(
-          ExportService.sanitizeCsvField('-cmd|...'), equals('""\'-cmd|...""'));
+          ExportService.sanitizeCsvField('-cmd|...'), equals('"\'-cmd|...\"'));
       expect(ExportService.sanitizeCsvField('@something'),
-          equals('""\'@something""'));
+          equals('"\'@something"'));
     });
 
     test('escapes internal quotes and wraps regular text in quotes', () {

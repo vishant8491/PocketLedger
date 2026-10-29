@@ -12,6 +12,7 @@ import '../widgets/summary_card.dart';
 import '../widgets/transaction_list_item.dart';
 import 'accounts_screen.dart';
 import 'budgets_screen.dart';
+import 'settings_screen.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_screen.dart';
 
@@ -39,6 +40,15 @@ class DashboardScreen extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const AccountsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
               );
             },
           ),

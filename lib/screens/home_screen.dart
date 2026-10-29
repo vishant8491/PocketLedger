@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'budgets_screen.dart';
 import 'dashboard_screen.dart';
 import 'insights_screen.dart';
-import 'settings_screen.dart';
 import 'transactions_screen.dart';
 
 /// The main application shell housing bottom navigation with an IndexedStack to preserve tab state.
@@ -59,20 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Insights',
           ),
         ],
-      ),
-      // Quick access to Settings from anywhere in the bottom bar shell
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(top: 8.0),
-        child: IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: 'Settings',
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            );
-          },
-        ),
       ),
     );
   }

@@ -1,34 +1,28 @@
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/transaction.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/date_helper.dart';
+import 'csv_export_helper.dart';
 
-/// Service for exporting transaction history to a CSV file and sharing via Android Share Sheet.
+/// Service for exporting transaction history to a CSV file and sharing via Android Share Sheet or Web download.
 /// Implements RFC-4180 CSV quoting and sanitizes against CSV Formula Injection.
 class ExportService {
   ExportService._();
 
   /// Converts a list of transactions into a CSV formatted string,
-  /// saves it to a cache file, and opens the system share dialog.
+  /// saves it to a cache file, and opens the system share dialog or browser download.
   static Future<void> exportAndShareTransactions(
       List<TransactionItem> transactions) async {
     final String csvContent = generateTransactionsCsv(transactions);
 
-    final Directory tempDir = await getTemporaryDirectory();
     final String timestamp = DateTime.now()
         .toIso8601String()
         .replaceAll(':', '-')
         .replaceAll('.', '-');
-    final String filePath =
-        '${tempDir.path}/PocketLedger_Export_$timestamp.csv';
+    final String fileName = 'PocketLedger_Export_$timestamp.csv';
 
-    final File file = File(filePath);
-    await file.writeAsString(csvContent);
-
-    await Share.shareXFiles(
-      <XFile>[XFile(filePath)],
+    await exportAndShareCsv(
+      csvContent: csvContent,
+      fileName: fileName,
       subject: 'PocketLedger Transactions Export',
       text: 'Exported ${transactions.length} transaction(s) from PocketLedger.',
     );

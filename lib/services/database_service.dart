@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'database_init_helper.dart';
 import '../models/account.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
@@ -23,8 +22,8 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
-    final String databasesPath = await getDatabasesPath();
-    final String path = p.join(databasesPath, _databaseName);
+    await initDatabasePlatform();
+    final String path = await resolveDatabasePath(_databaseName);
 
     return await openDatabase(
       path,
