@@ -2,6 +2,10 @@
 
 An offline-first, privacy-focused personal finance manager built with **Flutter**, **Provider**, and **SQLite**. Designed as a production-grade portfolio project with clean architecture, zero cloud dependencies, mathematically precise money calculations, and native support for both **Android** and **Modern Mobile Web**.
 
+[![Live Web Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-success?style=for-the-badge&logo=googlechrome)](https://vishant8491.github.io/PocketLedger/)
+[![Download APK](https://img.shields.io/badge/Download%20APK-v1.0.0-blue?style=for-the-badge&logo=android)](https://github.com/vishant8491/PocketLedger/releases/tag/v1.0.0)
+[![Flutter Tests](https://img.shields.io/badge/Tests-20%20Passed-brightgreen?style=for-the-badge&logo=flutter)](https://github.com/vishant8491/PocketLedger/actions)
+
 ---
 
 ## 🌟 Key Features
